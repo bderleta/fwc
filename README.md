@@ -1,0 +1,2 @@
+# fwc
+Fast line counter
