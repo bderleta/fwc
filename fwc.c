@@ -7,35 +7,36 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h> 
 
-#define NUM_THREADS 4
+#define NUM_THREADS 16
 
 volatile uint64_t nl_count;
 volatile ssize_t buf_size;
 
-void *count_nl(void *argument) {
-	uint32_t n = 0;
+void* count_nl(void* argument) {
+	size_t n = 0;
 	char* str = (char*)argument;
-	for (uint32_t i = 0; i < buf_size; ++i)
+	for (size_t i = 0; i < buf_size; ++i)
 		if (str[i] == '\n')
 			n++;
-	return (void*)(n);	
+	return (void*)(n);
 }
 
-void *count_nla(void *argument, uint32_t count) {
-	uint32_t n = 0;
+void* count_nla(void* argument, uint32_t count) {
+	size_t n = 0;
 	char* str = (char*)argument;
-	for (uint32_t i = 0; i < count; ++i)
+	for (size_t i = 0; i < count; ++i)
 		if (str[i] == '\n')
 			n++;
-	return (void*)(n);	
+	return (void*)(n);
 }
 
-int main(int argc, char** argv) {	      
+int main(int argc, char** argv) {
 	if (argc < 2)
 		return 1;
 	/* Preallocate buffer */
@@ -48,7 +49,7 @@ int main(int argc, char** argv) {
 		buf_size = 262144 * atoi(argv[2]);
 	else
 		buf_size = 1048576;
-	fprintf(stderr, "Allocating buffer of %u bytes\n", buf_size * NUM_THREADS);
+	fprintf(stderr, "Allocating buffer of %" PRIu64 " bytes\n", buf_size * NUM_THREADS);
 	uint8_t* buf = (uint8_t*)malloc(buf_size * NUM_THREADS);
 	/* Open file */
 	fprintf(stderr, "Opening file %s\n", argv[1]);
@@ -68,25 +69,26 @@ int main(int argc, char** argv) {
 				pthread_join(threads[i], (void**)&t);
 				nl_count += t;
 			}
-		} else {
+		}
+		else {
 			/* Finish one-thread */
-			nl_count += (uint32_t)(count_nla((void*)buf, buf_read));
+			nl_count += (size_t)(count_nla((void*)buf, buf_read));
 		}
 		/* Report progress */
 		total_read += buf_read;
 		if (total_read % (100 * 1048576) == 0)
-			fprintf(stderr, "\r  %g MiB        \r", (total_read / 1048576.0)); 
+			fprintf(stderr, "\r  %g MiB        \r", (total_read / 1048576.0));
 	}
 	fprintf(stderr, "\n");
 	if (buf_read < 0) {
 		perror(argv[1]);
 	}
 	/* Close file */
-	fprintf(stderr, "Closing\n", argv[1]);
+	fprintf(stderr, "Closing\n");
 	if (close(fd) < 0) {
 		perror(argv[1]);
 	}
 	free(buf);
-	printf("%llu", nl_count);
+	printf("%" PRIu64, nl_count);
 	return 0;
 }
